@@ -16,17 +16,17 @@ Now simply add forex to your `application/bundles.php` with auto start enabled :
 
 Convert one currency to another:
 
-    echo Forex::fetch()->from('USD')->to('GBP')-convert();
+    echo Forex::fetch()->from('USD')->to('GBP')->convert();
     // 0.64377
 
 Convert currencies using historical date:
 
-    echo Forex::fetch('2012-01-01')->from()->to('GBP')-convert();
+    echo Forex::fetch('2012-01-01')->from()->to('GBP')->convert();
     // 0.643232 (USD is base rate)
 
 Convert specified amount of currency:
 
-    echo Forex::fetch()->from('eur')->to('usd')-convert(10.50);
+    echo Forex::fetch()->from('eur')->to('usd')->convert(10.50);
     // 13.17855
 
 Fetch unix timestamp of rates retrieved:
