@@ -10,11 +10,18 @@
  * @author    Michael Dimmock <michael.dimmock@virgin.net>
  * @copyright 2012 - Michael Dimmock
  * @license   MIT License <http://www.opensource.org/licenses/mit-license.php>
- * @version   1.0
+ * @version   1.0.1
  * @link      https://github.com/michaeldim/laravel-Forex
  */
 class Forex
 {
+    /**
+     * Configuration settings.
+     *
+     * @var array
+     */
+    protected $_config = array();
+
     /**
      * Stores the exchange rates.
      *
@@ -77,21 +84,23 @@ class Forex
      * @param string $date  date to use for exchange rate
      * @param bool   $cache whether to use cached results
      */
-    public function __construct($date = null, $cache = true)
+    public function __construct($date = null)
     {
+        $this->_config = \Config::get('forex::config');
+
         $fx = null;
         $currencies = null;
 
         if ($date) {
-            if ($cache == true) {
-                $fx = Cache::get('fx_historical_' .$date);
+            if ($this->_config['caching']['enabled'] == true) {
+                $fx = \Cache::get('fx_historical_' .$date);
 
                 if (empty($fx)) {
                     $filename = 'historical/' .$date. '.json';
                     $fx = $this->curl($filename);
 
                     // cache forever as historical will not change
-                    Cache::forever('fx_historical_' .$date, $fx);
+                    \Cache::put('fx_historical_' .$date, $fx, $this->_config['caching']['time']['historical']);
                 }
             } else {
                 $filename = 'historical/' .$date. '.json';
@@ -99,15 +108,14 @@ class Forex
             }
 
         } else {
-            if ($cache == true) {
+            if ($this->_config['caching']['enabled'] == true) {
                 $fx = \Cache::get('fx_latest');
 
                 if (empty($fx)) {
                     $filename = 'latest.json';
                     $fx = $this->curl($filename);
 
-                    // 'latest' api is refreshed every 15 mins
-                    Cache::put('fx_latest' .$date, $fx, 15);
+                    \Cache::put('fx_latest' .$date, $fx, $this->_config['caching']['time']['latest']);
                 }
             } else {
                 $filename = 'latest.json';
@@ -115,13 +123,13 @@ class Forex
             }
         }
 
-        if ($cache == true) {
+        if ($this->_config['caching']['enabled'] == true) {
             $currency = \Cache::get('fx_currencies');
 
-            if (empty($currencies)) {
+            if (empty($currency)) {
                 $filename = 'currencies.json';
                 $currencies = $this->curl($filename);
-                \Cache::put('fx_currencies', $currencies, 720);
+                \Cache::put('fx_currencies', $currencies, $this->_config['caching']['time']['currencies']);
             }
         } else {
             $filename = 'currencies.json';
@@ -144,9 +152,9 @@ class Forex
      *
      * @return object
      */
-    public static function fetch($date = null, $cache = true)
+    public static function fetch($date = null)
     {
-        return new self($date, $cache);
+        return new self($date);
     }
 
     /**
@@ -270,7 +278,10 @@ class Forex
     protected function curl($filename)
     {
         if (function_exists('curl_version')) {
-            $ch = curl_init('http://openexchangerates.org/' .$filename);
+
+            $api_key = $this->_config['api_key'];
+
+            $ch = curl_init('http://openexchangerates.org/' .$filename. '?app_id=' .$api_key);
 
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_HEADER, false);
